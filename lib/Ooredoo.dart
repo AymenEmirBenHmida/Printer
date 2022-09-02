@@ -75,7 +75,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           context,
                           MaterialPageRoute(
                               builder: (context) => Dinar(
-                                    operator: "Telecom Tunisie",
+                                    operator: "telecom tunisie",
                                   )),
                         );
                       },
@@ -102,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           context,
                           MaterialPageRoute(
                               builder: (context) => Dinar(
-                                    operator: "Orange",
+                                    operator: "orange",
                                   )),
                         );
                       },
