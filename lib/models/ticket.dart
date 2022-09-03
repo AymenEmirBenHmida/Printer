@@ -32,7 +32,6 @@ class TicketC {
         });
     if (response.statusCode == 200) {
       var list = json.decode(response.body);
-      log("body " + response.body);
 
       return list["count1Dt"];
     }
@@ -40,7 +39,7 @@ class TicketC {
   }
 
   getNumberOfTickets5dt() async {
-    log("entered get number of tickete 5");
+    // log("entered get number of tickete 5");
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     String Token = prefs.getString("token");
@@ -50,10 +49,10 @@ class TicketC {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + Token
         });
-    log("response code " + response.statusCode.toString());
+    // log("response code " + response.statusCode.toString());
     if (response.statusCode == 200) {
       var list = json.decode(response.body);
-      log("body " + response.body);
+      // log("body " + response.body);
 
       return list["count5Dt"];
     }
@@ -66,7 +65,10 @@ class TicketC {
 
     String Token = prefs.getString("token");
     http.Response response = await http.get(
-        Uri.parse(GlobalV.urlTicketNumbers + this.operator.toString()+"/"+this.type.toString()),
+        Uri.parse(GlobalV.urlTicketNumbers +
+            this.operator.toString() +
+            "/" +
+            this.type.toString()),
         headers: <String, String>{
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + Token

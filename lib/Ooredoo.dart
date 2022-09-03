@@ -123,8 +123,11 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             Align(
                 alignment: Alignment.bottomCenter,
-                child: FutureBuilder(
-                  future: initBalance(),
+                child: StreamBuilder(
+                        stream: Stream.periodic(Duration(seconds: 1)).asyncMap(
+                            (i) =>
+                                 initBalance()),
+                  
                   builder: (context, snapshot) {
                     return Text(
                       "Balance : " + snapshot.data.toString(),

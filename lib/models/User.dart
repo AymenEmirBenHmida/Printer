@@ -143,10 +143,10 @@ class User {
     });
     if (response.statusCode == 200) {
       var list = json.decode(response.body);
-      log("body " + response.body);
+      //log("body " + response.body);
 
       this.balance = list["balance"];
-      log(this.balance.toString());
+      //log(this.balance.toString());
     }
     return this.balance;
   }
