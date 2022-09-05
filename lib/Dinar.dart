@@ -1,10 +1,23 @@
 import 'dart:developer';
+import 'dart:io';
 
+import 'package:esc_pos_bluetooth/esc_pos_bluetooth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bluetooth_basic/flutter_bluetooth_basic.dart';
 import 'package:thermal_printer_flutter/home.dart';
 import 'package:thermal_printer_flutter/models/ticket.dart';
 import 'package:thermal_printer_flutter/print.dart';
 import 'package:awesome_dialog/awesome_dialog.dart' as awesome;
+import 'dart:developer';
+import 'dart:typed_data';
+import 'package:flutter/material.dart' hide Image;
+import 'package:esc_pos_bluetooth/esc_pos_bluetooth.dart';
+import 'package:esc_pos_utils/esc_pos_utils.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bluetooth_basic/flutter_bluetooth_basic.dart';
+import 'dart:io' show Platform;
+import 'package:image/image.dart';
+import 'package:thermal_printer_flutter/models/ticket.dart';
 
 class Dinar extends StatefulWidget {
   String operator;
@@ -14,6 +27,155 @@ class Dinar extends StatefulWidget {
 }
 
 class _DinarState extends State<Dinar> {
+  PrinterBluetoothManager _printerManager = PrinterBluetoothManager();
+  List<PrinterBluetooth> _devices = [];
+  String _devicesMsg;
+  BluetoothManager bluetoothManager = BluetoothManager.instance;
+  TicketC ticketC;
+  int typo;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    if (Platform.isAndroid) {
+      bluetoothManager.state.listen((val) {
+        print('state = $val');
+        if (!mounted) return;
+        if (val == 12) {
+          print('on');
+          initPrinter();
+        } else if (val == 10) {
+          print('off');
+          setState(() => _devicesMsg = 'Bluetooth Disconnect!');
+        }
+      });
+    } else {
+      initPrinter();
+    }
+  }
+
+  void initPrinter() {
+    try {
+      _printerManager.startScan(Duration(seconds: 2));
+      _printerManager.scanResults.listen((val) {
+        if (!mounted) return;
+        setState(() => _devices = val);
+        if (_devices.isEmpty) setState(() => _devicesMsg = 'No Devices');
+      });
+    } catch (e) {
+      log(e.toString());
+    }
+  }
+
+  Future<void> _startPrint(PrinterBluetooth printer) async {
+    try {
+      _printerManager.selectPrinter(printer);
+      String code = await TicketC(
+              operator: widget.operator,
+              type: typo,
+              code: "12345687",
+              status: "")
+          .getTicket();
+      log("code" + code);
+
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(
+      //       builder: (context) => Print(
+      //             ticket: TicketC(
+      //                 operator: widget.operator,
+      //                 type: 1,
+      //                 code: code,
+      //                 status: ""),
+      //           )),
+      // );
+      setState(() {
+        ticketC = TicketC(
+            operator: widget.operator, type: typo, code: code, status: "");
+      });
+      final result =
+          await _printerManager.printTicket(await _ticket(PaperSize.mm80));
+      var tt = await _ticket(PaperSize.mm80);
+      if (tt == null || tt.bytes.isEmpty || result.msg.contains("Error")) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            content:
+                Text(result.msg + " , get code manually = " + ticketC.code),
+          ),
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            content: Text(result.msg),
+          ),
+        );
+      }
+    } catch (e) {
+      log(e.toString());
+    }
+  }
+
+  Future<Ticket> _ticket(PaperSize paper) async {
+    try {
+      final ticket = Ticket(paper);
+      int total = 0;
+
+      // // Image assets
+      // final ByteData data = await rootBundle.load('assets/store.png');
+      // final Uint8List bytes = data.buffer.asUint8List();
+      // final Image image = decodeImage(bytes);
+      // ticket.image(image);
+      // ticket.text(
+      //   'TOKO KU',
+      //   styles: PosStyles(
+      //       align: PosAlign.center,
+      //       height: PosTextSize.size2,
+      //       width: PosTextSize.size2),
+      //   linesAfter: 1,
+      // );
+
+      // for (var i = 0; i < widget.data.length; i++) {
+      //   total += widget.data[i]['total_price'];
+      //   ticket.text(widget.data[i]['title']);
+      //   ticket.row([
+      //     PosColumn(
+      //         text: '${widget.data[i]['price']} x ${widget.data[i]['qty']}',
+      //         width: 6),
+      //     PosColumn(text: 'Rp ${widget.data[i]['total_price']}', width: 6),
+      //   ]);
+      // }
+
+      ticket.feed(1);
+      ticket.row([
+        PosColumn(
+            text: ticketC.operator + " ",
+            width: 12,
+            styles: PosStyles(bold: true)),
+        //PosColumn(text: 'Rp $total', width: 6, styles: PosStyles(bold: true)),
+      ]);
+      ticket.feed(2);
+      ticket.text("Code:  " + ticketC.code,
+          styles: PosStyles(align: PosAlign.center, bold: true));
+      ticket.cut();
+
+      return ticket;
+    } catch (e) {
+      log(e.toString());
+    }
+  }
+
+  @override
+  void dispose() {
+    try {
+      _printerManager.stopScan();
+    } catch (e) {
+      log(e.toString());
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,26 +218,13 @@ class _DinarState extends State<Dinar> {
                               },
                               btnOkOnPress: () async {
                                 try {
-                                  response = true;
-                                  String code = await TicketC(
-                                          operator: widget.operator,
-                                          type: 1,
-                                          code: "12345687",
-                                          status: "")
-                                      .getTicket();
-                                  log("code" + code);
-
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => Print(
-                                              ticket: TicketC(
-                                                  operator: widget.operator,
-                                                  type: 1,
-                                                  code: code,
-                                                  status: ""),
-                                            )),
-                                  );
+                                  if (_devices != 0) {
+                                    response = true;
+                                    setState(() {
+                                      typo = 1;
+                                    });
+                                    _startPrint(_devices[0]);
+                                  }
                                 } catch (e) {
                                   log(e.toString());
                                 }
@@ -149,24 +298,23 @@ class _DinarState extends State<Dinar> {
                               },
                               btnOkOnPress: () async {
                                 response = true;
-                                String code = await TicketC(
-                                        operator: widget.operator,
-                                        type: 5,
-                                        code: "12345687",
-                                        status: "")
-                                    .getTicket();
-                                log("code" + code);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => Print(
-                                            ticket: TicketC(
-                                                operator: widget.operator,
-                                                type: 5,
-                                                code: code,
-                                                status: ""),
-                                          )),
-                                );
+                                if (_devices != 0) {
+                                  // Navigator.push(
+                                  //   context,
+                                  //   MaterialPageRoute(
+                                  //       builder: (context) => Print(
+                                  //             ticket: TicketC(
+                                  //                 operator: widget.operator,
+                                  //                 type: 5,
+                                  //                 code: code,
+                                  //                 status: ""),
+                                  //           )),
+                                  // );
+                                  setState(() {
+                                    typo = 5;
+                                  });
+                                  _startPrint(_devices[0]);
+                                }
                               },
                             ).show();
                           } catch (e) {

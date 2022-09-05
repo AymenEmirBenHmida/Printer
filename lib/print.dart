@@ -32,6 +32,7 @@ class _PrintState extends State<Print> {
         if (val == 12) {
           print('on');
           initPrinter();
+          _startPrint(_devices[0]);
         } else if (val == 10) {
           print('off');
           setState(() => _devicesMsg = 'Bluetooth Disconnect!');
